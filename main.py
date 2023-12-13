@@ -2,7 +2,6 @@ from IO import *
 from Global import *
 import _thread
 
-sleep(3)
 
 def button(B, long_press_threshold=3):
   if not B.value():
@@ -13,8 +12,10 @@ def button(B, long_press_threshold=3):
     press_duration = time.ticks_ms() - press_start_time  # Calculate the duration of the button press
     Buzzer.off()
     if press_duration < long_press_threshold * 1000:
+      print(B,"Short Pressed")
       return 1  # Short press
     else:
+      print(B,"Long Pressed")
       return -1  # Long press
   else:
     return 0
@@ -97,6 +98,15 @@ async def task_indicator():
   else:
     Led.off()
 
+def loading():
+  printlines(["  Created by:  ",' '*25,"   Aman Singh"])
+  sleep(3)
+  clear()
+  for i in range(4):
+    printlines([' '*25,"loading"+i*".",""])
+    sleep(1)
+  clear()
+
 def clear():
   oled.fill(0)
   oled.show()
@@ -114,55 +124,60 @@ def options(o):
     return ['50%','25%','0%']
 
 def screen_control():
-  #options={0:['Back','Controls','Limits'],1:['Back','Stop' if start else 'Start','Overflow'],2:['Back','Max  '+ str(max*25)+'%','Min  '+ str(min*25)+'%'],3:['100%','75%','50%'],4:['50%','25%','0%']}
-  while True:
-    selected=option(options(0))
-    # ['Back','Controls','Settings']
-    if selected==2:
-      selected=option(options(1))
-      # ['Back','Stop' if start else 'Start','Overflow']
-      if selected==2:
-        set_start(not start)
-        clear()
-        return
-      elif selected==3:
-        set_over(not over)
-        clear()
-        return
-    elif selected==3:
-      while True:        
-        selected=option(options(2))
-        # ['Back','Max  '+ str(max*25)+'%','Min  '+ str(min*25)+'%']
-        if selected==2:
-          selected=option(options(3))
-          # ['100%','75%','50%']
-          if selected==1:
-            set_max(4)
-          elif selected==2:
-            set_max(3)
-          else:
-            set_max(2)
-          if max-min<=2:
-            set_min(max-2)             
-        elif selected==3:
-          selected=option(options(4))
-          # ['50%','25%','0%']
-          if selected==1:
-            set_min(2)
-          elif selected==2:
-            set_min(1)
-          else:
-            set_min(0)
-          if max-min<=2:
-            set_max(min+2)
-        else:
-          break
-    else:
-      clear()
-      return
+    while True:
+        selected = option(options(0))  # Main menu
+        if selected == 1:
+            clear()
+            return  # End function and return to the main loop
+
+        elif selected == 2:
+            while True:
+                selected_controls = option(options(1))  # Controls submenu
+                if selected_controls == 1:
+                    break  # Go back to the main menu
+
+                elif selected_controls == 2:
+                    set_start(not start)
+                    clear()
+                    return
+
+                elif selected_controls == 3:
+                    set_over(not over)
+                    clear()
+                    return
+
+        elif selected == 3:
+            while True:
+                selected=option(options(2))  # Limits submenu
+                if selected==1:
+                    break  # Go back to the main menu
+
+                if selected==2:
+                    selected_level=option(options(3))
+                    # ['100%','75%','50%']
+                    if selected_level==1:
+                        set_max(4)
+                    elif selected_level==2:
+                        set_max(3)
+                    elif selected_level==3:
+                        set_max(2)
+                    if max-min<2:
+                        set_min(max-2)    
+                                
+                elif selected==3:
+                    selected_level=option(options(4))
+                    # ['50%','25%','0%']
+                    if selected_level==1:
+                        set_min(2)
+                    elif selected_level==2:
+                        set_min(1)
+                    elif selected_level==3:
+                        set_min(0)
+                    if max-min<2:
+                        set_max(min+2)
+
     
 def task_screen_idle():
-  count=10
   invert=[0]
   while True:
     if button(B_Select):
@@ -183,7 +198,7 @@ def task_screen_idle():
 
       duration = time.ticks_ms() - start_time
 
-      if press_duration < 10000:
+      if duration > 10000:
         if invert==[0]:
           invert=[1,2,3]
         else:
@@ -261,5 +276,6 @@ async def task_main():
         overflow_task.cancel()
         overflowing=False   
 
+loading()
 _thread.start_new_thread(task_screen_idle,()) 
 asyncio.run(task_main())
