@@ -5,20 +5,19 @@ import _thread
 sleep(3)
 
 def button(B, long_press_threshold=3):
-    if not B.value():
-        Buzzer.on()
-        press_start_time = time.ticks_ms()  # Record the start time of the button press
-        while not B.value():
-            pass
-        press_duration = time.ticks_ms() - press_start_time  # Calculate the duration of the button press
-        Buzzer.off()
-
-        if press_duration < long_press_threshold * 1000:
-            return 1  # Short press
-        else:
-            return -1  # Long press
+  if not B.value():
+    Buzzer.on()
+    press_start_time = time.ticks_ms()  # Record the start time of the button press
+    while not B.value():
+      pass
+    press_duration = time.ticks_ms() - press_start_time  # Calculate the duration of the button press
+    Buzzer.off()
+    if press_duration < long_press_threshold * 1000:
+      return 1  # Short press
     else:
-        return 0
+      return -1  # Long press
+  else:
+    return 0
 
 
 def set_start(mode):
@@ -98,6 +97,10 @@ async def task_indicator():
   else:
     Led.off()
 
+def clear():
+  oled.fill(0)
+  oled.show()
+
 def options(o):
   if o==0:
     return ['Back','Controls','Limits']
@@ -120,9 +123,11 @@ def screen_control():
       # ['Back','Stop' if start else 'Start','Overflow']
       if selected==2:
         set_start(not start)
+        clear()
         return
       elif selected==3:
         set_over(not over)
+        clear()
         return
     elif selected==3:
       while True:        
@@ -144,7 +149,7 @@ def screen_control():
           # ['50%','25%','0%']
           if selected==1:
             set_min(2)
-          elif selected==1:
+          elif selected==2:
             set_min(1)
           else:
             set_min(0)
@@ -153,8 +158,7 @@ def screen_control():
         else:
           break
     else:
-      oled.fill(0)
-      oled.show()
+      clear()
       return
     
 def task_screen_idle():
@@ -164,6 +168,7 @@ def task_screen_idle():
     if button(B_Select):
       screen_control()
     else:
+      start_time = time.ticks_ms()
       lines=[]
       filled=str(level*25)
       if starting:
@@ -175,16 +180,15 @@ def task_screen_idle():
           lines=['  Motor is On   ','Filled'+' '*(12-2*len(filled))+filled+'%','']
       else:
         lines=['  Motor is Off  ','Level'+' '*(12-2*len(filled))+filled+'%','']
-      
-      if count==0:
-        count=10
+
+      duration = time.ticks_ms() - start_time
+
+      if press_duration < 10000:
         if invert==[0]:
           invert=[1,2,3]
         else:
           invert=[0]
       printlines(lines,invert)
-      count-=1
-      sleep(1)
 
 # For controlling motor
 async def motor(mode):
