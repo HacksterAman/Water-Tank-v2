@@ -4,15 +4,22 @@ import _thread
 
 sleep(3)
 
-def button(B):
-  if not B.value():
-    Buzzer.on()
-    while not B.value():
-      pass
-    Buzzer.off()       
-    return True
-  else:
-    return False
+def button(B, long_press_threshold=3):
+    if not B.value():
+        Buzzer.on()
+        press_start_time = time.ticks_ms()  # Record the start time of the button press
+        while not B.value():
+            pass
+        press_duration = time.ticks_ms() - press_start_time  # Calculate the duration of the button press
+        Buzzer.off()
+
+        if press_duration < long_press_threshold * 1000:
+            return 1  # Short press
+        else:
+            return -1  # Long press
+    else:
+        return 0
+
 
 def set_start(mode):
   global start

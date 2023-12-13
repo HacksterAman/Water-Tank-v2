@@ -1,4 +1,5 @@
 from utime import sleep,sleep_ms
+import time
 import uasyncio as asyncio
 import sh1106
 from machine import Pin,I2C
