@@ -14,10 +14,10 @@ def button(B, long_press_threshold=3):
         )  # Calculate the duration of the button press
         Buzzer.off()
         if press_duration < long_press_threshold * 1000:
-            print(B, "Short Pressed")
+            print(B, "Short Press")
             return 1  # Short press
         else:
-            print(B, "Long Pressed")
+            print(B, "Long Press")
             return -1  # Long press
     else:
         return 0
@@ -107,11 +107,12 @@ async def task_indicator():
     else:
         Led.off()
 
-
-def loading():
+def start():
     printlines(["  Created by:  ", " " * 25, "   Aman Singh"])
     sleep(3)
     clear()
+
+def load():
     for i in range(4):
         printlines([" " * 25, "loading" + "." * i, ""])
         sleep(1)
@@ -191,6 +192,7 @@ def screen_control():
 
 
 def task_screen_idle():
+    load()
     invert = [0]
     while True:
         if button(B_Select) == -1:
@@ -234,6 +236,7 @@ def task_screen_idle():
                     invert = [1, 2, 3]
                 else:
                     invert = [0]
+                    
             printlines(lines, invert)
 
 
@@ -268,6 +271,7 @@ async def overflow():
 
 
 async def task_main():
+    start()
     global power, level
     while True:
         # For Indicating Status
@@ -310,7 +314,6 @@ async def task_main():
                 overflow_task.cancel()
                 overflowing = False
 
-
-loading()
-_thread.start_new_thread(task_screen_idle, ())
 asyncio.run(task_main())
+_thread.start_new_thread(task_screen_idle, ())
+
