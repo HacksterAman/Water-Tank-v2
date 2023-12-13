@@ -103,7 +103,7 @@ def loading():
   sleep(3)
   clear()
   for i in range(4):
-    printlines([' '*25,"loading"+i*".",""])
+    printlines([' '*25,"loading"+"."*i,""])
     sleep(1)
   clear()
 
