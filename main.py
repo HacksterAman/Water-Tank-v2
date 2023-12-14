@@ -29,6 +29,7 @@ def set_start(mode):
     file.seek(0)
     file.write(str(int(mode)))
     file.flush()
+    print(f'{"Start Motor" if mode else "Stop Motor"} Command is Initiated')
 
 
 def set_min(level):
@@ -53,6 +54,7 @@ def set_over(mode):
     file.seek(3)
     file.write(str(int(mode)))
     file.flush()
+    print(f'{"Start Overflow" if mode else "Stop Overflow"} Command is Initiated')
 
 
 def new_level():
@@ -287,7 +289,7 @@ async def task_main():
                 await asyncio.sleep(1)
                 if new_level() != level:
                     level = new_level()
-                    print("Tank Water Level is changed to", level)
+                    print("Water Level is changed to", level)
                     await asyncio.sleep(1)
 
         # For contolling Start/Stop according to Min and Max Limits
