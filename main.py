@@ -245,19 +245,17 @@ def task_screen_idle():
 # For controlling motor
 async def motor(mode):
     global starting
-    starting = mode
     filling = mode
     if mode:
-        await asyncio.sleep(3)
         Relay1.on()
         await asyncio.sleep(13)
         Relay2.on()
         await asyncio.sleep(3)
         Relay2.off()
-        starting = False
     else:
         Relay2.off()
         Relay1.off()
+    starting = False
 
 
 # For overflowing tank for 100 seconds
@@ -271,16 +269,24 @@ async def overflow():
     set_over(False)
     overflowing = False
 
+# Checking Main Line Power Supply
+async def line():
+    global power
+    while True:
+        if In_Power.value():
+            await asyncio.sleep(3)
+            if In_Power.value():
+                power=True
+        else:
+            power=False
 
 async def task_main():
     start()
-    global power, level
+    global power, level, overflowing
+    asyncio.create_task(line())
     while True:
         # For Indicating Status
         indicator = asyncio.create_task(task_indicator())
-
-        power = In_Power.value()
-        await asyncio.sleep(1)
 
         # For checking Changes in Tank Level
         if new_level() != level:
