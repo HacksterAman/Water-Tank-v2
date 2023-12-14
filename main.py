@@ -23,53 +23,6 @@ def button(B, long_press_threshold=3):
         return 0
 
 
-def set_start(mode):
-    global start
-    start = mode
-    file.seek(0)
-    file.write(str(int(mode)))
-    file.flush()
-    print(f'{"Start Motor" if mode else "Stop Motor"} Command is Initiated')
-
-
-def set_min(level):
-    global min
-    min = level
-    file.seek(1)
-    file.write(str(level))
-    file.flush()
-
-
-def set_max(level):
-    global max
-    max = level
-    file.seek(2)
-    file.write(str(level))
-    file.flush()
-
-
-def set_over(mode):
-    global over
-    over = mode
-    file.seek(3)
-    file.write(str(int(mode)))
-    file.flush()
-    print(f'{"Start Overflow" if mode else "Stop Overflow"} Command is Initiated')
-
-
-def new_level():
-    if not In_100.value():
-        return 4
-    elif not In_75.value():
-        return 3
-    elif not In_50.value():
-        return 2
-    elif not In_25.value():
-        return 1
-    else:
-        return 0
-
-
 def printlines(lines, invert=[0]):
     if len(lines[0]) == 9:
         font = Font_Thick
@@ -96,23 +49,11 @@ def option(o):
     return selected
 
 
-async def task_indicator():
-    if power:
-        if overflowing:
-            Led.toggle()
-            asyncio.sleep_ms(250)
-        elif filling:
-            Led.toggle()
-            asyncio.sleep_ms(500)
-        else:
-            Led.on()
-    else:
-        Led.off()
-
 def start():
     printlines(["  Created by:  ", " " * 25, "   Aman Singh"])
     sleep(3)
     clear()
+
 
 def load():
     for i in range(4):
@@ -242,6 +183,68 @@ def task_screen_idle():
             printlines(lines, invert)
 
 
+def set_start(mode):
+    global start
+    start = mode
+    file.seek(0)
+    file.write(str(int(mode)))
+    file.flush()
+    print(f'{"Start Motor" if mode else "Stop Motor"} Command is Initiated')
+
+
+def set_min(level):
+    global min
+    min = level
+    file.seek(1)
+    file.write(str(level))
+    file.flush()
+
+
+def set_max(level):
+    global max
+    max = level
+    file.seek(2)
+    file.write(str(level))
+    file.flush()
+
+
+def set_over(mode):
+    global over
+    over = mode
+    file.seek(3)
+    file.write(str(int(mode)))
+    file.flush()
+    print(f'{"Start Overflow" if mode else "Stop Overflow"} Command is Initiated')
+
+
+async def task_indicator():
+    while True:
+        if power:
+            if overflowing:
+                Led.toggle()
+                asyncio.sleep_ms(250)
+            elif filling:
+                Led.toggle()
+                asyncio.sleep_ms(500)
+            else:
+                Led.on()
+        else:
+            Led.off()
+            
+
+def new_level():
+    if not In_100.value():
+        return 4
+    elif not In_75.value():
+        return 3
+    elif not In_50.value():
+        return 2
+    elif not In_25.value():
+        return 1
+    else:
+        return 0
+
+
 # For controlling motor
 async def motor(mode):
     global starting
@@ -270,7 +273,7 @@ async def overflow():
     overflowing = False
 
 # Checking Main Line Power Supply
-async def line():
+async def task_line():
     global power
     while True:
         if In_Power.value():
@@ -280,24 +283,29 @@ async def line():
         else:
             power=False
 
-async def task_main():
-    start()
-    global power, level, overflowing
-    asyncio.create_task(line())
+# For checking Changes in Tank Level
+async def task_level():
+    global level
+    print("Level Check Task")
     while True:
-        # For Indicating Status
-        indicator = asyncio.create_task(task_indicator())
-
-        # For checking Changes in Tank Level
         if new_level() != level:
+            print(f"New Water Level Reading: {new_level()*25}%")
             await asyncio.sleep(1)
             if new_level() != level:
                 await asyncio.sleep(1)
                 if new_level() != level:
                     level = new_level()
-                    print("Water Level is changed to", level)
-                    await asyncio.sleep(1)
+                    print(f"Water Level is changed to {level*25}%")
+        await asyncio.sleep(1)
 
+async def task_main():
+    global power, level, overflowing
+    asyncio.create_task(task_line())
+    asyncio.create_task(task_level())
+    # For Indicating Status
+    asyncio.create_task(task_indicator())
+
+    while True:
         # For contolling Start/Stop according to Min and Max Limits
         if level <= min and not start:
             set_start(True)
@@ -322,6 +330,8 @@ async def task_main():
                 overflow_task.cancel()
                 overflowing = False
 
-asyncio.run(task_main())
+start()
 _thread.start_new_thread(task_screen_idle, ())
+asyncio.run(task_main())
+
 
