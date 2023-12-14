@@ -282,6 +282,7 @@ async def task_line():
                 power=True
         else:
             power=False
+        await asyncio.sleep(0.25)
 
 # For checking Changes in Tank Level
 async def task_level():
