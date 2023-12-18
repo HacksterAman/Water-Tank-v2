@@ -1,4 +1,4 @@
-# Submersible Motor Control System with Overflow Protection
+# Submersible Motor Control System
 
 ## Table of Contents
 
