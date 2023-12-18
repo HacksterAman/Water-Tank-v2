@@ -147,7 +147,11 @@ def screen_control():
                     break  # Go back to the main menu
 
                 elif selected_controls == 2:
-                    set_start(not start)
+                    if start:
+                        set_start(False)
+                        set_over(False)
+                    elif level<max:
+                        set_start(True)
                     clear()
                     return
 
@@ -194,18 +198,18 @@ def screen_control():
 def task_screen_idle():
     load()
     invert = [0]
+    start_time = time.ticks_ms()
     while True:
-        if button(B_Select) == -1:
+        if button(B_Select) == -1 or button(B_Next) == -1:
             screen_control()
         else:
-            start_time = time.ticks_ms()
             lines = []
             filled = str(level * 25)
             if starting:
                 lines = [
                     "Starting Motor",
                     "Level" + " " * (12 - 2 * len(filled)) + filled + "%",
-                    "",
+                    f"{'Overflow is on' if over else ' '*25}",
                 ]
             elif filling:
                 if overflowing:
@@ -214,29 +218,30 @@ def task_screen_idle():
                         " " * (12 - len(str(over_timer)))
                         + str(over_timer)
                         + " " * (12 - len(str(over_timer))),
-                        "Filled" + " " * (12 - 2 * len(filled)) + filled + "%",
+                        " "*25,
                     ]
                 else:
                     lines = [
                         "  Motor is On   ",
                         "Filled" + " " * (12 - 2 * len(filled)) + filled + "%",
-                        "",
+                        f"{'Overflow is on' if over else ' '*25}",
                     ]
             else:
                 lines = [
                     "  Motor is Off  ",
                     "Level" + " " * (12 - 2 * len(filled)) + filled + "%",
-                    "",
+                    f"{'Overflow is on' if over else ' '*25}",
                 ]
 
             duration = time.ticks_ms() - start_time
 
-            if duration > 10000:
+            if duration > 15000:
                 if invert == [0]:
                     invert = [1, 2, 3]
                 else:
                     invert = [0]
-
+                start_time = time.ticks_ms()
+                
             printlines(lines, invert)
 
 
@@ -274,10 +279,10 @@ def set_over(mode):
     print(f'{"Start Overflow" if mode else "Stop Overflow"} Command is Initiated')
 
 
-async def task_blink(delay):
+async def task_blink():
     while True:
         Led.toggle()
-        await asyncio.sleep_ms(delay)
+        await asyncio.sleep_ms(500)
 
 
 def new_level():
@@ -299,8 +304,9 @@ async def motor(mode):
     if mode:
         starting = True
         print("Motor is Starting")
+        await asyncio.sleep(3)
         Relay1.on()
-        await asyncio.sleep(13)
+        await asyncio.sleep(20)
         Relay2.on()
         await asyncio.sleep(3)
         Relay2.off()
@@ -318,7 +324,7 @@ async def motor(mode):
 async def overflow():
     global overflowing, over_timer
     overflowing = True
-    for i in range(120, -1, -1):
+    for i in range(100, -1, -1):
         over_timer = i
         await asyncio.sleep(1)
     set_start(False)
@@ -339,41 +345,29 @@ async def line():
             power = True
             print("Power is On")
 
-
 async def task_main():
     print("Main Task Initiated")
     global power, level, overflowing, filling
     asyncio.create_task(line())
-    # asyncio.create_task(task_blink())
 
     while True:
-        if new_level() != level:
-            await asyncio.sleep(1)
-            if new_level() != level:
+        temp_level = new_level()
+        if temp_level != level:
+            for _ in range(3):
                 await asyncio.sleep(1)
-                if new_level() != level:
-                    level = new_level()
-                    print(f"Water Level is changed to {level*25}%")
-
-        # For contolling Start/Stop according to Min and Max Limits
-        if level <= min and not start:
-            set_start(True)
-        elif level >= max and start:
-            # Checking for overflow setting
-            if over:
-                # Checking conditions for Overflowing
-                if filling and over and level == 4 and not overflowing:
-                    indicate_overflow_task = asyncio.create_task(task_blink(250))
-                    overflow_task = asyncio.create_task(overflow())
+                if new_level() != temp_level:
+                    break
             else:
-                set_start(False)
+                level = temp_level
+                print(f"Water Level is changed to {level * 25}%")
+
 
         # For checking conditions to Control Motor
         if start and power:
             if not filling:
                 print("Motor Task Start Command")
                 filling = True
-                indicate_fill_task = asyncio.create_task(task_blink(500))
+                indicate_fill_task = asyncio.create_task(task_blink())
                 motor_task = asyncio.create_task(motor(True))
         elif filling:
             print("Motor Task Cancel Command")
@@ -384,8 +378,19 @@ async def task_main():
             if overflowing:
                 # Cancelling task if Overflowing
                 overflow_task.cancel()
-                indicate_overflow_task.cancel()
                 overflowing = False
+
+        # For contolling Start/Stop according to Min and Max Limits
+        if level <= min and not start:
+            set_start(True)
+        elif level >= max and start:
+            # Checking for overflow setting
+            if over:
+                # Checking conditions for Overflowing
+                if filling and level == 4 and not overflowing and not starting:
+                    overflow_task = asyncio.create_task(overflow())
+            else:
+                set_start(False)
 
         if power:
             if not filling and not overflowing:
@@ -397,3 +402,4 @@ async def task_main():
 start()
 _thread.start_new_thread(task_screen_idle, ())
 asyncio.run(task_main())
+
