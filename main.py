@@ -1,3 +1,4 @@
+# Import necessary libraries
 import _thread
 from utime import sleep, sleep_ms
 import time
@@ -56,6 +57,7 @@ overflowing = False
 over_timer = 0
 
 
+# Function to handle button presses
 def button(B, long_press_threshold=1.5):
     if not B.value():
         Buzzer.on()
@@ -67,15 +69,14 @@ def button(B, long_press_threshold=1.5):
         )  # Calculate the duration of the button press
         Buzzer.off()
         if press_duration < long_press_threshold * 1000:
-            print(B, "Short Press")
             return 1  # Short press
         else:
-            print(B, "Long Press")
             return -1  # Long press
     else:
         return 0
 
 
+# Function to print lines on the display
 def printlines(lines, invert=[0]):
     if len(lines[0]) == 9:
         font = Font_Thick
@@ -87,6 +88,7 @@ def printlines(lines, invert=[0]):
     Writer.set_textpos(0, 0)
 
 
+# Function to handle option selection on the display
 def option(o):
     i = [1, 2, 3]
     O = []
@@ -102,12 +104,14 @@ def option(o):
     return selected
 
 
+# Initialization function to be called at the start
 def start():
     printlines(["  Created by:  ", " " * 25, "   Aman Singh"])
     sleep(3)
     clear()
 
 
+# Function to display loading animation
 def load():
     for i in range(4):
         printlines([" " * 25, "loading" + "." * i, ""])
@@ -115,11 +119,13 @@ def load():
     clear()
 
 
+# Function to clear the display
 def clear():
     oled.fill(0)
     oled.show()
 
 
+# Function to define options for different menus
 def options(o):
     if o == 0:
         return ["Back", "Controls", "Limits"]
@@ -133,8 +139,10 @@ def options(o):
         return ["50%", "25%", "0%"]
 
 
+# Main function for controlling the display and user input
 def screen_control():
     while True:
+        # Main menu options
         selected = option(options(0))  # Main menu
         if selected == 1:
             clear()
@@ -142,20 +150,23 @@ def screen_control():
 
         elif selected == 2:
             while True:
+                # Controls submenu options
                 selected_controls = option(options(1))  # Controls submenu
                 if selected_controls == 1:
                     break  # Go back to the main menu
 
                 elif selected_controls == 2:
+                    # Start/Stop Motor option
                     if start:
                         set_start(False)
                         set_over(False)
-                    elif level<max:
+                    elif level < max:
                         set_start(True)
                     clear()
                     return
 
                 elif selected_controls == 3:
+                    # Overflow option
                     if over:
                         set_over(False)
                     else:
@@ -166,13 +177,15 @@ def screen_control():
 
         elif selected == 3:
             while True:
+                # Limits submenu options
                 selected = option(options(2))  # Limits submenu
                 if selected == 1:
                     break  # Go back to the main menu
 
                 if selected == 2:
+                    # Set Max Limit option
                     selected_level = option(options(3))
-                    # ['100%','75%','50%']
+                    # ['100%', '75%', '50%']
                     if selected_level == 1:
                         set_max(4)
                     elif selected_level == 2:
@@ -183,8 +196,9 @@ def screen_control():
                         set_min(max - 2)
 
                 elif selected == 3:
+                    # Set Min Limit option
                     selected_level = option(options(4))
-                    # ['50%','25%','0%']
+                    # ['50%', '25%', '0%']
                     if selected_level == 1:
                         set_min(2)
                     elif selected_level == 2:
@@ -195,30 +209,35 @@ def screen_control():
                         set_max(min + 2)
 
 
+# Task function for the idle screen
 def task_screen_idle():
     load()
     invert = [0]
     start_time = time.ticks_ms()
     while True:
+        # Check if any of the buttons are pressed
         if button(B_Select) == -1 or button(B_Next) == -1:
+            # If pressed, go to the screen control menu
             screen_control()
         else:
             lines = []
             filled = str(level * 25)
             if starting:
+                # Display information during motor starting phase
                 lines = [
                     "Starting Motor",
                     "Level" + " " * (12 - 2 * len(filled)) + filled + "%",
                     f"{'Overflow is on' if over else ' '*25}",
                 ]
             elif filling:
+                # Display information when the motor is on and filling
                 if overflowing:
                     lines = [
                         "  Overflowing  ",
                         " " * (12 - len(str(over_timer)))
                         + str(over_timer)
                         + " " * (12 - len(str(over_timer))),
-                        " "*25,
+                        " " * 25,
                     ]
                 else:
                     lines = [
@@ -227,6 +246,7 @@ def task_screen_idle():
                         f"{'Overflow is on' if over else ' '*25}",
                     ]
             else:
+                # Display information when the motor is off
                 lines = [
                     "  Motor is Off  ",
                     "Level" + " " * (12 - 2 * len(filled)) + filled + "%",
@@ -235,25 +255,28 @@ def task_screen_idle():
 
             duration = time.ticks_ms() - start_time
 
+            # Invert the display every 15 seconds
             if duration > 15000:
                 if invert == [0]:
                     invert = [1, 2, 3]
                 else:
                     invert = [0]
                 start_time = time.ticks_ms()
-                
+
+            # Print the lines on the display
             printlines(lines, invert)
 
 
+# Function to set the start mode (motor on/off) and update the log file
 def set_start(mode):
     global start
     start = mode
     file.seek(0)
     file.write(str(int(mode)))
     file.flush()
-    print(f'{"Start Motor" if mode else "Stop Motor"} Command is Initiated')
 
 
+# Function to set the minimum water level and update the log file
 def set_min(level):
     global min
     min = level
@@ -262,6 +285,7 @@ def set_min(level):
     file.flush()
 
 
+# Function to set the maximum water level and update the log file
 def set_max(level):
     global max
     max = level
@@ -270,21 +294,23 @@ def set_max(level):
     file.flush()
 
 
+# Function to set the overflow mode and update the log file
 def set_over(mode):
     global over
     over = mode
     file.seek(3)
     file.write(str(int(mode)))
     file.flush()
-    print(f'{"Start Overflow" if mode else "Stop Overflow"} Command is Initiated')
 
 
+# Task function for blinking the indicator LED
 async def task_blink():
     while True:
         Led.toggle()
         await asyncio.sleep_ms(500)
 
 
+# Function to determine the current water level based on input pins
 def new_level():
     if not In_100.value():
         return 4
@@ -298,29 +324,25 @@ def new_level():
         return 0
 
 
-# For controlling motor
+# Task function for controlling motor
 async def motor(mode):
     global starting
     if mode:
         starting = True
-        print("Motor is Starting")
         await asyncio.sleep(3)
         Relay1.on()
         await asyncio.sleep(20)
         Relay2.on()
         await asyncio.sleep(3)
         Relay2.off()
-        print("Motor is Started")
         starting = False
     else:
         starting = False
-        print("Motor is Stoping")
         Relay2.off()
         Relay1.off()
-        print("Motor is Stoped")
 
 
-# For overflowing tank for 100 seconds
+# Task function for overflowing tank for 100 seconds
 async def overflow():
     global overflowing, over_timer
     overflowing = True
@@ -332,21 +354,20 @@ async def overflow():
     overflowing = False
 
 
-# Checking Main Line Power Supply
+# Task function for checking the main line power supply
 async def line():
     global power
     while True:
         await asyncio.sleep(1)
         if not In_Power.value():
             power = False
-            print("No Power")
         elif power == False:
             await asyncio.sleep(3)
             power = True
-            print("Power is On")
 
+
+# Main task function for controlling the entire system
 async def task_main():
-    print("Main Task Initiated")
     global power, level, overflowing, filling
     asyncio.create_task(line())
 
@@ -359,18 +380,14 @@ async def task_main():
                     break
             else:
                 level = temp_level
-                print(f"Water Level is changed to {level * 25}%")
-
 
         # For checking conditions to Control Motor
         if start and power:
             if not filling:
-                print("Motor Task Start Command")
                 filling = True
                 indicate_fill_task = asyncio.create_task(task_blink())
                 motor_task = asyncio.create_task(motor(True))
         elif filling:
-            print("Motor Task Cancel Command")
             filling = False
             motor_task.cancel()
             indicate_fill_task.cancel()
@@ -380,7 +397,7 @@ async def task_main():
                 overflow_task.cancel()
                 overflowing = False
 
-        # For contolling Start/Stop according to Min and Max Limits
+        # For controlling Start/Stop according to Min and Max Limits
         if level <= min and not start:
             set_start(True)
         elif level >= max and start:
@@ -399,7 +416,9 @@ async def task_main():
             Led.off()
 
 
+# Call the start function
 start()
+# Start a new thread for the screen idle task
 _thread.start_new_thread(task_screen_idle, ())
+# Run the main task
 asyncio.run(task_main())
-
