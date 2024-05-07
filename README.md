@@ -13,29 +13,23 @@ The Submersible Motor Control System is designed for efficient control of submer
 
 ## Features
 
-- **Motor Control:**
-  - Control of submersible motors with a stabilizer (Relay 1) and a starter (Relay 2).
+- **Motor Control:** Control of submersible motors with a stabilizer (Relay 1) and a starter (Relay 2).
   - Manual start/stop motor control for flexibility.
 
-- **Water Level Monitoring:**
-  - Precise monitoring of five water levels to ensure accurate control.
+- **Water Level Monitoring:** Precise monitoring of five water levels to ensure accurate control.
 
-- **Overflow Protection:**
-  - Intentional overflow feature for tank water cleanup.
+- **Overflow Protection:** Intentional overflow feature for tank water cleanup.
   - Option to enable or disable overflow protection.
 
-- **Customization:**
-  - Adjustable minimum and maximum water level limits for personalized settings.
+- **Customization:** Adjustable minimum and maximum water level limits for personalized settings.
 
-- **Real-time Display:**
-  - OLED display for real-time status monitoring.
+- **Real-time Display:** OLED display for real-time status monitoring.
 
-- **User-friendly Interface:**
-  - Menu-based navigation for easy configuration.
+- **User-friendly Interface:** Menu-based navigation for easy configuration.
 
 ## Hardware Requirements
 
-- Microcontroller (e.g., ESP32 or similar)
+- Microcontroller (RP2040, STM32, ESP32/ESP8266, etc.)
 - Submersible motor with stabilizer (Relay 1) and starter (Relay 2)
 - Water level sensors
 - Input buttons (Next, Select)
