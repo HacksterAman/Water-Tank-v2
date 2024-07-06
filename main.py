@@ -383,24 +383,32 @@ async def task_main():
     global power, level, overflowing, filling
     asyncio.create_task(line())
     asyncio.create_task(monitor_level())
+    sleep(5)
 
     while True:
 
-        # For checking conditions to Control Motor
-        if start and power:
-            if not filling:
-                filling = True
-                indicate_fill_task = asyncio.create_task(task_blink())
-                motor_task = asyncio.create_task(motor(True))
-        elif filling:
-            filling = False
-            motor_task.cancel()
-            indicate_fill_task.cancel()
-            await motor(False)
-            if overflowing:
-                # Cancelling task if Overflowing
-                overflow_task.cancel()
-                overflowing = False
+        # For checking conditions and controling motor and indicator
+        if power:
+            if indicate_fill_task is None:
+                Led.on()  # Turn on the LED
+            if start:
+                if not filling:
+                    filling = True
+                    indicate_fill_task = asyncio.create_task(task_blink())
+                    motor_task = asyncio.create_task(motor(True))
+        else:
+            if indicate_fill_task is not None:
+                indicate_fill_task.cancel()  # Cancel the task if power is off
+                indicate_fill_task = None
+            Led.off()  # Turn off the LED
+            if filling:
+                filling = False
+                motor_task.cancel()
+                await motor(False)
+                if overflowing:
+                    # Cancelling task if Overflowing
+                    overflow_task.cancel()
+                    overflowing = False
 
         # For controlling Start/Stop according to Min and Max Limits
         if level <= min and not start:
@@ -414,16 +422,11 @@ async def task_main():
             else:
                 set_start(False)
 
-        if power:
-            if not filling and not overflowing:
-                Led.on()
-        else:
-            Led.off()
-
-
 # Call the start function
 start()
+
 # Start a new thread for the screen idle task
 _thread.start_new_thread(task_screen_idle, ())
+
 # Run the main task
 asyncio.run(task_main())
