@@ -323,6 +323,18 @@ def new_level():
     else:
         return 0
 
+# Function to monitor and update current water level
+async def monitor_level():
+    global level 
+    while True:
+        temp_level = new_level()  # Capture the current level
+        if temp_level != level:  # Check if there's a change in the level
+            for _ in range(3):  # Loop to confirm the change over 3 seconds
+                await asyncio.sleep(1)  # Wait for 1 second
+                if new_level() != temp_level:  # Check if the level has changed again
+                    break  # Break if it has changed
+            else:  # If the level is consistent for 3 seconds
+                level = temp_level  # Update the level to the new value
 
 # Task function for controlling motor
 async def motor(mode):
@@ -370,16 +382,9 @@ async def line():
 async def task_main():
     global power, level, overflowing, filling
     asyncio.create_task(line())
+    asyncio.create_task(monitor_level())
 
     while True:
-        temp_level = new_level()
-        if temp_level != level:
-            for _ in range(3):
-                await asyncio.sleep(1)
-                if new_level() != temp_level:
-                    break
-            else:
-                level = temp_level
 
         # For checking conditions to Control Motor
         if start and power:
