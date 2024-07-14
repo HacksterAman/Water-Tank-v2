@@ -105,7 +105,7 @@ def option(o):
 
 
 # Initialization function to be called at the start
-def start():
+def intro():
     printlines(["  Created by:  ", " " * 25, "   Aman Singh"])
     sleep(3)
     clear()
@@ -323,18 +323,6 @@ def new_level():
     else:
         return 0
 
-# Function to monitor and update current water level
-async def monitor_level():
-    global level 
-    while True:
-        temp_level = new_level()  # Capture the current level
-        if temp_level != level:  # Check if there's a change in the level
-            for _ in range(3):  # Loop to confirm the change over 3 seconds
-                await asyncio.sleep(1)  # Wait for 1 second
-                if new_level() != temp_level:  # Check if the level has changed again
-                    break  # Break if it has changed
-            else:  # If the level is consistent for 3 seconds
-                level = temp_level  # Update the level to the new value
 
 # Task function for controlling motor
 async def motor(mode):
@@ -370,45 +358,55 @@ async def overflow():
 async def line():
     global power
     while True:
-        await asyncio.sleep(1)
-        if not In_Power.value():
-            power = False
-        elif power == False:
-            await asyncio.sleep(3)
-            power = True
+        await asyncio.sleep(3)
+        power = In_Power.value()
 
 
 # Main task function for controlling the entire system
 async def task_main():
     global power, level, overflowing, filling
     asyncio.create_task(line())
-    asyncio.create_task(monitor_level())
-    sleep(5)
-
+    
+    indicate_fill_task = None  # Initialize task variables
+    motor_task = None
+    
     while True:
-
-        # For checking conditions and controling motor and indicator
-        if power:
-            if indicate_fill_task is None:
-                Led.on()  # Turn on the LED
-            if start:
-                if not filling:
-                    filling = True
-                    indicate_fill_task = asyncio.create_task(task_blink())
-                    motor_task = asyncio.create_task(motor(True))
+        
+        if power and indicate_fill_task == None:
+            Led.on()
         else:
-            if indicate_fill_task is not None:
-                indicate_fill_task.cancel()  # Cancel the task if power is off
-                indicate_fill_task = None
-            Led.off()  # Turn off the LED
-            if filling:
-                filling = False
+            Led.off()
+        
+        # For checking Changes in Tank Level
+        temp_level = new_level()  # Capture the current level
+        if temp_level != level:  # Check if there's a change in the level
+            for _ in range(3):  # Loop to confirm the change over 3 seconds
+                await asyncio.sleep(1)  # Wait for 1 second
+                if new_level() != temp_level:  # Check if the level has changed again
+                    break  # Break if it has changed
+            else:  # If the level is consistent for 3 seconds
+                level = temp_level  # Update the level to the new value
+
+        # For checking conditions to Control Motor
+        if start and power:
+            if not filling:
+                filling = True
+                print("Creating blink and motor tasks")  # Debug print
+                indicate_fill_task = asyncio.create_task(task_blink())
+                motor_task = asyncio.create_task(motor(True))
+        elif filling:
+            filling = False
+            if motor_task:
                 motor_task.cancel()
-                await motor(False)
-                if overflowing:
-                    # Cancelling task if Overflowing
-                    overflow_task.cancel()
-                    overflowing = False
+                motor_task = None
+            if indicate_fill_task:
+                indicate_fill_task.cancel()
+                indicate_fill_task = None
+            await motor(False)
+            if overflowing:
+                # Cancelling task if Overflowing
+                overflow_task.cancel()
+                overflowing = False
 
         # For controlling Start/Stop according to Min and Max Limits
         if level <= min and not start:
@@ -422,11 +420,15 @@ async def task_main():
             else:
                 set_start(False)
 
-# Call the start function
-start()
+        await asyncio.sleep(1)  # Prevent tight loop
+
+# Call the Introduction function
+intro()
 
 # Start a new thread for the screen idle task
 _thread.start_new_thread(task_screen_idle, ())
 
 # Run the main task
 asyncio.run(task_main())
+
+
